@@ -1,37 +1,62 @@
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <title></title>
-  <link rel="stylesheet" href="index-markdown-styles.css">
-</head>
-<body>
-  <div id="content"></div>
-  <a href="https://github.com/adrienjoly/cours-javascript"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
-  <script src="index-markdown-stmd.js"></script>
-  <script src="index-markdown-render.js"></script>
-  <script async src='https://www.google-analytics.com/analytics.js'></script>
-  <script async src='/autotrack.js'></script>
-  <script type="text/javascript">
-    // google analytics + autotrack
-    try {
-      window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
-      ga('create', 'UA-1858235-4', 'auto');
-      ga('require', 'autotrack');
-      //ga('send', 'pageview');
-    } catch(e) {
-      console.error(e);
-    }
-    // markdown renderer
-    function displayMarkdownPageFromHash() {
-      renderMd(window.location.hash.substr(1));
-      document.body.scrollTop = document.documentElement.scrollTop = 0;
-      ga('send', 'pageview', {
-       'page': location.pathname + location.search  + location.hash
-      });
-    }
-    displayMarkdownPageFromHash();
-    window.onhashchange = displayMarkdownPageFromHash;
-  </script>
-</body>
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src='https://cdn.firebase.com/js/client/2.2.1/firebase.js'></script>
+    </head>
+    <body>
+        <form id="formulaire">
+            <input id="saisie">
+        </form>
+        <div id="afaire"></div>
+        <script>
+            // cette version utilise innerHTML pour gérer le DOM.
+            // référence vers notre back-end firebase
+            var dbUrl = 'https://flickering-inferno-5369.firebaseIO.com'; // URL fournie lors de la 
+            var myDataRef = new Firebase(dbUrl);
+            // cette fonction sera appelée quand l'utilisateur pressera entrée dans le champ            
+            document.getElementById('formulaire').onsubmit = function(evt) {
+                evt.preventDefault();
+                console.log(document.getElementById('saisie').value);
+                // enregistrement de la nouvelle tache dans firebase
+                myDataRef.push({
+                    name: document.getElementById('saisie').value, // nom saisi de la tache
+                    done: false // par défaut, une nouvelle tache n'est pas effectuée
+                });
+            };
+            // cette fonction est appelé par firebase pour chaque tache stockée en base de données
+            myDataRef.on('child_added', function(snapshot) {
+                var key = snapshot.key();
+                var tache = snapshot.val();
+                // cocher la checkbox seulement si la tache est terminée
+                var checked = '';
+                if (tache.done) {
+                    checked = 'checked="true"';
+                }
+                // rendu HTML de la tache en cours
+                var afaire = document.getElementById('afaire'); // référence du div de la liste
+                afaire.innerHTML = afaire.innerHTML + '<p '
+                    + 'id="' + key + '">'
+                    + '<input onclick="cocherTache(\'' + key + '\')" type="checkbox" ' + checked + '">'
+                    + '<span onclick="supprimerTache(\'' + key + '\')">' + tache.name + '</span>'
+                    + '</p>';
+            });
+            // fonction appelée par le navigateur quand l'utilisateur clique sur une tache
+            function supprimerTache(key) {
+                console.log('supprimer', key);
+                // supprimer l'objet de firebase
+                var refTache = new Firebase(dbUrl + '/' + key);
+                refTache.remove();
+                // supprimer l'élément HTML du DOM
+                var elem = document.getElementById(key);
+                elem.parentElement.removeChild(elem);
+            }
+            // fonction appelée par le navigateur quant l'utilisateur clique sur une checkbox
+            function cocherTache(key) {
+                console.log('cocher', key);
+                // modifier l'objet de firebase
+                var refTache = new Firebase(dbUrl + '/' + key);
+                refTache.update({ done: true });
+            }
+        </script>
+    </body>
 </html>
